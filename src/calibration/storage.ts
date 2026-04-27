@@ -14,7 +14,9 @@
 import { params, type Parameters } from '../config/parameters.js';
 
 const COOKIE_NAME = 'web_hand_calibration';
-const COOKIE_VERSION = 1;
+// Bumped to 2 when grab calibration was removed; older v1 cookies get
+// dropped on load instead of attempting partial-shape decoding.
+const COOKIE_VERSION = 2;
 /** Cookie lifetime in seconds — one year. */
 const COOKIE_MAX_AGE_S = 365 * 24 * 60 * 60;
 
@@ -23,7 +25,6 @@ interface StoredProfile {
   ts: number;
   pinch: { enter: number; exit: number };
   point: { indexExtendedMax: number; othersCurledMin: number };
-  grab:  { enter: number; exit: number };
 }
 
 function readCookie(name: string): string | null {
@@ -55,7 +56,6 @@ function snapshot(): StoredProfile {
     ts: Date.now(),
     pinch: { enter: params.pinch.enter, exit: params.pinch.exit },
     point: { indexExtendedMax: params.point.indexExtendedMax, othersCurledMin: params.point.othersCurledMin },
-    grab:  { enter: params.grab.enter,  exit: params.grab.exit  },
   };
 }
 
@@ -66,7 +66,6 @@ function apply(profile: StoredProfile): void {
   };
   merge('pinch', profile.pinch);
   merge('point', profile.point);
-  merge('grab',  profile.grab);
 }
 
 export function saveCalibration(): void {

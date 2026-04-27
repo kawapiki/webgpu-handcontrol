@@ -8,8 +8,8 @@
  *   3. (Optional) wire it up in `interaction/interactionController.ts`.
  */
 
+import type { GestureConfig } from '../config/gestureConfig.js';
 import type { FrameInput, GestureContext, GestureDetector, GestureState } from '../config/types.js';
-import { grabDetector } from './grab.js';
 import { openPalmDetector } from './openPalm.js';
 import { pinchDetector } from './pinch.js';
 import { pointDetector } from './point.js';
@@ -19,7 +19,6 @@ import { twoHandZoomDetector } from './twoHandZoom.js';
 export const detectors: readonly GestureDetector[] = [
   pointDetector,
   pinchDetector,
-  grabDetector,
   openPalmDetector,
   twoHandZoomDetector,
   twoHandRotateDetector,
@@ -28,7 +27,7 @@ export const detectors: readonly GestureDetector[] = [
 export class GestureRuntime {
   private states = new Map<string, GestureState>();
 
-  constructor() {
+  constructor(private readonly getConfig: () => GestureConfig) {
     for (const det of detectors) {
       this.states.set(det.name, det.initial());
     }
@@ -39,7 +38,7 @@ export class GestureRuntime {
     // to inspect peers (e.g. mode logic). We freeze before stepping to avoid
     // detection-order coupling.
     const snapshot: Record<string, GestureState> = Object.fromEntries(this.states);
-    const ctx: GestureContext = { nowMs, prevMs, states: snapshot };
+    const ctx: GestureContext = { nowMs, prevMs, states: snapshot, config: this.getConfig() };
 
     for (const det of detectors) {
       const prev = this.states.get(det.name) ?? det.initial();

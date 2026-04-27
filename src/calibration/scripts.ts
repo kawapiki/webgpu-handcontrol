@@ -1,5 +1,5 @@
 /**
- * Calibration scripts for the three baseline gestures: pinch, point, grab.
+ * Calibration scripts for the two baseline gestures: pinch and point.
  *
  * Pattern: each phase alternates "DO" and "RELAX" steps so we capture both
  * tails of the distribution. After all steps, the phase's `compute()`
@@ -12,7 +12,7 @@
  *   enter = on_high + 0.30 * gap        (snappy to engage)
  *   exit  = on_high + 0.70 * gap        (slow to release — hysteresis)
  * The same formula works for any metric where ON < OFF (pinch, index curl).
- * For metrics where ON > OFF (mean curl in grab) we flip the roles.
+ * For metrics where ON > OFF we flip the roles.
  *
  * Confidence = clamp01(gap / median_dispersion). >= 0.6 considered "rock solid".
  */
@@ -184,53 +184,9 @@ const pointPhase: CalibrationPhase = {
   },
 };
 
-// ---------- grab ----------
-
-function sampleMeanCurl(input: FrameInput, push: (v: number) => void): void {
-  for (const hand of input.hands) {
-    const c = hand.metrics.curl;
-    const m = ((c[1] ?? 0) + (c[2] ?? 0) + (c[3] ?? 0) + (c[4] ?? 0)) / 4;
-    push(m);
-  }
-}
-
-const grabSteps: CalibrationStep[] = [
-  { id: 'off1', prompt: 'Hold your hand open / relaxed', hint: 'Fingers extended or loose. Definitely NOT a fist.', durationMs: STEP_DURATION, sample: sampleMeanCurl },
-  { id: 'on1',  prompt: 'GRAB — close into a tight fist', hint: 'All four fingers curled firmly (thumb position doesn\'t matter).', durationMs: STEP_DURATION, sample: sampleMeanCurl },
-  { id: 'off2', prompt: 'Release — open your hand', hint: '', durationMs: STEP_DURATION, sample: sampleMeanCurl },
-  { id: 'on2',  prompt: 'GRAB again — tight fist', hint: '', durationMs: STEP_DURATION, sample: sampleMeanCurl },
-];
-
-const grabPhase: CalibrationPhase = {
-  id: 'grab',
-  label: 'Grab (closed fist)',
-  steps: grabSteps,
-  compute(samples: SampleBins): PhaseResult {
-    const off = [...(samples['off1'] ?? []), ...(samples['off2'] ?? [])];
-    const on  = [...(samples['on1']  ?? []), ...(samples['on2']  ?? [])];
-    const { enter, exit, separation, notes } = deriveThresholds(on, off, 'gt');
-    const before = { enter: params.grab.enter, exit: params.grab.exit };
-    if (Number.isFinite(enter) && Number.isFinite(exit) && enter > exit) {
-      params.grab.enter = clamp(enter, 0.3, 0.98);
-      params.grab.exit  = clamp(exit,  0.2, params.grab.enter - 0.02);
-    } else {
-      notes.push('skipping apply: invalid enter/exit values');
-    }
-    return {
-      confident: separation >= 0.6,
-      separation,
-      applied: [
-        { key: 'grab.enter', before: before.enter, after: params.grab.enter },
-        { key: 'grab.exit',  before: before.exit,  after: params.grab.exit  },
-      ],
-      notes,
-    };
-  },
-};
-
 // ---------- registry ----------
 
-export const calibrationPhases: readonly CalibrationPhase[] = [pinchPhase, pointPhase, grabPhase];
+export const calibrationPhases: readonly CalibrationPhase[] = [pinchPhase, pointPhase];
 
 function clamp(x: number, lo: number, hi: number): number {
   return Math.min(hi, Math.max(lo, x));

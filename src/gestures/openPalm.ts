@@ -2,7 +2,6 @@
  * Open palm — all fingers extended. Used as a "release / stop / menu" event.
  */
 
-import { params } from '../config/parameters.js';
 import type { FrameInput, GestureContext, GestureDetector, GestureState } from '../config/types.js';
 import { condition, emptyState, holdGate, meanFingerCurl } from './utils.js';
 
@@ -22,7 +21,7 @@ export const openPalmDetector: GestureDetector<OpenPalmData> = {
 
     for (const hand of input.hands) {
       const curl = meanFingerCurl(hand.metrics);
-      const open = curl < params.openPalm.maxCurl;
+      const open = curl < ctx.config.openPalm.maxCurl;
       if (open && curl < bestCurl) {
         rawOn = true;
         bestCurl = curl;
@@ -33,10 +32,10 @@ export const openPalmDetector: GestureDetector<OpenPalmData> = {
       }
     }
 
-    const gated = holdGate(rawOn, { active: prev.active, enteredAt: prev.enteredAt }, ctx.nowMs, params.openPalm.holdMs);
+    const gated = holdGate(rawOn, { active: prev.active, enteredAt: prev.enteredAt }, ctx.nowMs, ctx.config.openPalm.holdMs);
     next.active = gated.active;
     next.enteredAt = gated.enteredAt;
-    next.confidence = rawOn ? Math.max(0, 1 - bestCurl / Math.max(1e-3, params.openPalm.maxCurl)) : 0;
+    next.confidence = rawOn ? Math.max(0, 1 - bestCurl / Math.max(1e-3, ctx.config.openPalm.maxCurl)) : 0;
     next.data = { handId: gated.active ? bestId : null };
     return next;
   },

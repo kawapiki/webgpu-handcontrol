@@ -13,7 +13,7 @@
  *   re-introduced (filter lag on fingertip vs DIP, for example).
  */
 
-import { params } from '../config/parameters.js';
+import type { SmoothingConfig, VelocityGateConfig } from '../config/gestureConfig.js';
 import type { Landmark, Landmarks } from '../config/types.js';
 import { OneEuroFilter } from './oneEuroFilter.js';
 import { TopologyConstraint } from './topologyConstraint.js';
@@ -21,16 +21,22 @@ import { TopologyConstraint } from './topologyConstraint.js';
 const AXIS_COUNT = 3;
 const LANDMARK_COUNT = 21;
 
+export interface SmootherConfig {
+  smoothing: SmoothingConfig;
+  velocityGate: VelocityGateConfig;
+}
+
 export class LandmarkSmoother {
   private filters: OneEuroFilter[];
   private prev: Landmark[] | null = null;
   private prevTimeMs = 0;
   private topology = new TopologyConstraint();
 
-  constructor() {
+  constructor(private readonly getConfig: () => SmootherConfig) {
     this.filters = new Array(LANDMARK_COUNT * AXIS_COUNT);
+    const initial = getConfig().smoothing;
     for (let i = 0; i < this.filters.length; i++) {
-      this.filters[i] = new OneEuroFilter({ ...params.smoothing });
+      this.filters[i] = new OneEuroFilter({ ...initial });
     }
   }
 
@@ -45,11 +51,11 @@ export class LandmarkSmoother {
   lastAnomalyCount(): number { return this.topology.anomalyCount(); }
 
   smooth(raw: Landmarks, timestampMs: number): Landmark[] {
-    const opts = params.smoothing;
-    for (const f of this.filters) f.setOptions(opts);
+    const cfg = this.getConfig();
+    for (const f of this.filters) f.setOptions(cfg.smoothing);
 
     const dt = this.prevTimeMs > 0 ? Math.max(1e-3, (timestampMs - this.prevTimeMs) / 1000) : 1 / 30;
-    const maxJump = params.velocityGate.maxNormPerSecond * dt;
+    const maxJump = cfg.velocityGate.maxNormPerSecond * dt;
 
     // 1. Velocity gate (per-axis, lenient now that topology fixes the rest).
     const gated: Landmark[] = new Array(LANDMARK_COUNT);

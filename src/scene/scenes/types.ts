@@ -8,9 +8,6 @@ import type * as THREE from 'three';
 
 import type { GestureState, HandFrame } from '../../config/types.js';
 
-/** Coarse interaction mode shared by multiple scenes. */
-export type Mode = 'pointer' | 'move' | 'draw';
-
 export interface SceneStepInput {
   hands: HandFrame[];
   states: Readonly<Record<string, GestureState>>;
@@ -18,8 +15,6 @@ export interface SceneStepInput {
   raycaster: THREE.Raycaster;
   /** Wall-clock ms since the previous frame. */
   dtMs: number;
-  /** Current global mode — scenes may ignore it. */
-  mode: Mode;
 }
 
 export interface DemoScene {

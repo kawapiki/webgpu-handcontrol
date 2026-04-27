@@ -4,8 +4,6 @@
  * doesn't get a 0×0 frame on the first inference call).
  */
 
-import { logger } from '../debug/logger.js';
-
 export interface CameraInit {
   videoEl: HTMLVideoElement;
   width: number;
@@ -13,7 +11,13 @@ export interface CameraInit {
   facingMode?: 'user' | 'environment';
 }
 
-export async function startCamera({ videoEl, width, height, facingMode = 'user' }: CameraInit): Promise<MediaStream> {
+export interface CameraResult {
+  stream: MediaStream;
+  width: number;
+  height: number;
+}
+
+export async function startCamera({ videoEl, width, height, facingMode = 'user' }: CameraInit): Promise<CameraResult> {
   if (!navigator.mediaDevices?.getUserMedia) {
     throw new Error('getUserMedia is not available in this browser.');
   }
@@ -43,6 +47,5 @@ export async function startCamera({ videoEl, width, height, facingMode = 'user' 
     check();
   });
 
-  logger.info(`camera: ${videoEl.videoWidth}×${videoEl.videoHeight}`);
-  return stream;
+  return { stream, width: videoEl.videoWidth, height: videoEl.videoHeight };
 }

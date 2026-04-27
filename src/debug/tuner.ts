@@ -58,11 +58,6 @@ export function buildTuner(sceneManager: SceneManager, onRecalibrate: () => void
   fPoint.addBinding(params.point, 'othersCurledMin', { min: 0.2, max: 1, step: 0.01 });
   fPoint.addBinding(params.point, 'holdMs', { min: 0, max: 500, step: 10 });
 
-  const fGrab = pane.addFolder({ title: 'Grab' });
-  fGrab.addBinding(params.grab, 'enter', { min: 0.3, max: 1, step: 0.01 });
-  fGrab.addBinding(params.grab, 'exit', { min: 0.2, max: 0.95, step: 0.01 });
-  fGrab.addBinding(params.grab, 'holdMs', { min: 0, max: 500, step: 10 });
-
   const fPalm = pane.addFolder({ title: 'Open palm' });
   fPalm.addBinding(params.openPalm, 'maxCurl', { min: 0, max: 0.5, step: 0.01 });
   fPalm.addBinding(params.openPalm, 'holdMs', { min: 0, max: 1000, step: 10 });
@@ -70,17 +65,33 @@ export function buildTuner(sceneManager: SceneManager, onRecalibrate: () => void
   const fTwo = pane.addFolder({ title: 'Two-hand' });
   fTwo.addBinding(params.twoHand, 'minBothScore', { min: 0, max: 1, step: 0.01 });
   fTwo.addBinding(params.twoHand, 'zoomDeadzone', { min: 0, max: 0.05, step: 0.001 });
-  fTwo.addBinding(params.twoHand, 'rotateDeadzone', { min: 0, max: 0.2, step: 0.001 });
+  fTwo.addBinding(params.twoHand, 'rotateDeadzone', { min: 0, max: 0.05, step: 0.001 });
+  fTwo.addBinding(params.twoHand, 'rotateHoldMs', { min: 0, max: 400, step: 10 });
+  fTwo.addBinding(params.twoHand, 'rotateSmoothing', { min: 0, max: 0.95, step: 0.01 });
+  fTwo.addBinding(params.twoHand, 'rotateMaxStep', { min: 0.1, max: 1.5, step: 0.05 });
+
+  const fObjectRotate = pane.addFolder({ title: 'Object rotate (wrist)' });
+  fObjectRotate.addBinding(params.objectRotate, 'rollGain', { min: 0, max: 4, step: 0.05 });
+  fObjectRotate.addBinding(params.objectRotate, 'pitchGain', { min: 0, max: 12, step: 0.1 });
+  fObjectRotate.addBinding(params.objectRotate, 'rollDeadzone', { min: 0, max: 0.05, step: 0.001 });
+  fObjectRotate.addBinding(params.objectRotate, 'pitchDeadzone', { min: 0, max: 0.05, step: 0.001 });
 
   const fScene = pane.addFolder({ title: 'Scene' });
   fScene.addBinding(params.scene, 'fov', { min: 30, max: 100, step: 1 });
   fScene.addBinding(params.scene, 'zoomGain', { min: 0.5, max: 20, step: 0.1 });
-  fScene.addBinding(params.scene, 'grabGain', { min: 0.5, max: 20, step: 0.1 });
+  fScene.addBinding(params.scene, 'dragGain', { min: 0.5, max: 20, step: 0.1 });
+
+  const fDepth = pane.addFolder({ title: 'Depth (hand-size sensing)' });
+  fDepth.addBinding(params.depth, 'referenceScale', { min: 0.05, max: 0.3, step: 0.005 });
+  fDepth.addBinding(params.depth, 'baseDepth', { min: 1.5, max: 7, step: 0.05 });
+  fDepth.addBinding(params.depth, 'gain', { min: -6, max: 6, step: 0.05 });
+  fDepth.addBinding(params.depth, 'min', { min: 0.5, max: 5, step: 0.1 });
+  fDepth.addBinding(params.depth, 'max', { min: 2, max: 12, step: 0.1 });
 
   const fHandMesh = pane.addFolder({ title: 'Hand mesh (3D)' });
   fHandMesh.addBinding(params.handMesh, 'show');
-  fHandMesh.addBinding(params.handMesh, 'depth', { min: 1.5, max: 8, step: 0.1 });
   fHandMesh.addBinding(params.handMesh, 'zScale', { min: 0, max: 12, step: 0.1 });
+  fHandMesh.addBinding(params.handMesh, 'sizeInvertGain', { min: 0, max: 4, step: 0.05, label: 'invert size' });
 
   const fDebug = pane.addFolder({ title: 'Debug' });
   fDebug.addBinding(params.debug, 'showLandmarks');
@@ -91,7 +102,6 @@ export function buildTuner(sceneManager: SceneManager, onRecalibrate: () => void
     options: {
       pinch: 'pinch',
       point: 'point',
-      grab: 'grab',
       open_palm: 'open_palm',
       two_hand_zoom: 'two_hand_zoom',
       two_hand_rotate: 'two_hand_rotate',
@@ -104,9 +114,10 @@ export function buildTuner(sceneManager: SceneManager, onRecalibrate: () => void
     Object.assign(params.detection, defaultParameters.detection);
     Object.assign(params.pinch, defaultParameters.pinch);
     Object.assign(params.point, defaultParameters.point);
-    Object.assign(params.grab, defaultParameters.grab);
     Object.assign(params.openPalm, defaultParameters.openPalm);
     Object.assign(params.twoHand, defaultParameters.twoHand);
+    Object.assign(params.objectRotate, defaultParameters.objectRotate);
+    Object.assign(params.depth, defaultParameters.depth);
     Object.assign(params.scene, defaultParameters.scene);
     Object.assign(params.debug, defaultParameters.debug);
     pane.refresh();

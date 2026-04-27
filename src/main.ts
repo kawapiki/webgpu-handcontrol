@@ -11,6 +11,7 @@ import { CalibrationOverlay } from './calibration/overlay.js';
 import { calibrationPhases } from './calibration/scripts.js';
 import { loadCalibration } from './calibration/storage.js';
 import { params } from './config/parameters.js';
+import { HandControl } from './control/handControl.js';
 import { logger } from './debug/logger.js';
 import { LandmarkOverlay } from './debug/overlay.js';
 import { Stats } from './debug/stats.js';
@@ -38,7 +39,6 @@ async function bootstrap(): Promise<void> {
   const sceneCanvas = $<HTMLCanvasElement>('#scene');
   const overlayCanvas = $<HTMLCanvasElement>('#overlay');
   const videoEl = $<HTMLVideoElement>('#cam');
-  const modeBadge = $('#mode-badge');
   const fpsEl = $('#fps');
   const inferEl = $('#infer');
   const handsEl = $('#hands');
@@ -52,10 +52,18 @@ async function bootstrap(): Promise<void> {
   });
   boot.classList.add('hidden');
 
-  await startCamera({ videoEl, width: 1280, height: 720 });
+  const cam = await startCamera({ videoEl, width: 1280, height: 720 });
+  logger.info(`camera: ${cam.width}×${cam.height}`);
 
   const sceneHandles = await createScene(sceneCanvas);
-  const sceneManager = createSceneManager(sceneHandles.worldPivot);
+  const handControl = new HandControl({
+    getViewport: () => ({ width: window.innerWidth, height: window.innerHeight }),
+    getHandPoseConfig: () => ({
+      rollDeadzone: params.objectRotate.rollDeadzone,
+      pitchDeadzone: params.objectRotate.pitchDeadzone,
+    }),
+  });
+  const sceneManager = createSceneManager(sceneHandles.worldPivot, handControl);
   const handMesh = new HandMesh();
   // Attach to scene root, not worldPivot — the visual hand should stay in
   // the user's reference frame even when two-hand-rotate spins the world.
@@ -65,14 +73,18 @@ async function bootstrap(): Promise<void> {
   const stats = new Stats(fpsEl, inferEl, handsEl);
   const why = new WhyPanel($('#why-panel'));
 
-  const tracker = new HandTracker();
+  // The lib reads its config via callbacks every frame, so live tuning
+  // through Tweakpane just works. `params` is a structural superset of
+  // the lib's GestureConfig.
+  logger.info('loading hand landmarker model…');
+  const tracker = new HandTracker(() => params);
   await tracker.init();
+  logger.info('hand landmarker ready (GPU delegate).');
 
-  const runtime = new GestureRuntime();
+  const runtime = new GestureRuntime(() => params);
   const controller = new InteractionController(
     { camera: sceneHandles.camera, worldPivot: sceneHandles.worldPivot },
     sceneManager,
-    modeBadge,
   );
 
   const calOverlay = new CalibrationOverlay($('#calibration'));
@@ -103,8 +115,8 @@ async function bootstrap(): Promise<void> {
       params.debug.showLandmarks = !params.debug.showLandmarks;
       tuner.pane.refresh();
     }
-    if (ev.key >= '1' && ev.key <= '6') {
-      const map = ['point', 'pinch', 'grab', 'open_palm', 'two_hand_zoom', 'two_hand_rotate'];
+    if (ev.key >= '1' && ev.key <= '5') {
+      const map = ['point', 'pinch', 'open_palm', 'two_hand_zoom', 'two_hand_rotate'];
       const idx = Number(ev.key) - 1;
       const target = map[idx]!;
       tuner.setFocusedGesture(target);
@@ -115,32 +127,47 @@ async function bootstrap(): Promise<void> {
   });
 
   let prevTimestamp = performance.now();
+  // Crash-isolated loop: any per-frame exception is logged to the in-page
+  // console and the rAF re-arm still happens, so a single bad frame can't
+  // freeze the app.
+  let lastErrorAt = 0;
   const loop = () => {
-    const now = performance.now();
-    if (!params.debug.paused) {
-      const inferStart = performance.now();
-      const frame = tracker.detect(videoEl, now);
-      const inferMs = performance.now() - inferStart;
+    try {
+      const now = performance.now();
+      if (!params.debug.paused) {
+        const inferStart = performance.now();
+        const frame = tracker.detect(videoEl, now);
+        const inferMs = performance.now() - inferStart;
 
-      if (calibrator.isActive()) {
-        // During calibration we still draw the landmark overlay so the user
-        // can confirm tracking, but we do NOT step the gesture runtime or
-        // scene controller — that would react to the same hand poses we're
-        // sampling for thresholds.
-        calibrator.step(frame, now);
-        overlay.draw(frame.hands);
-      } else {
-        const states = runtime.step(frame, now, prevTimestamp);
-        controller.step(frame.hands, states, now);
-        overlay.draw(frame.hands);
-        why.setTarget(tuner.getFocusedGesture());
-        why.update(states);
+        if (calibrator.isActive()) {
+          // During calibration we still draw the landmark overlay so the user
+          // can confirm tracking, but we do NOT step the gesture runtime or
+          // scene controller — that would react to the same hand poses we're
+          // sampling for thresholds.
+          calibrator.step(frame, now);
+          overlay.draw(frame.hands);
+        } else {
+          const states = runtime.step(frame, now, prevTimestamp);
+          handControl.step(frame.hands, states, now);
+          controller.step(frame.hands, states, now);
+          overlay.draw(frame.hands);
+          why.setTarget(tuner.getFocusedGesture());
+          why.update(states);
+        }
+        handMesh.update(frame.hands, sceneHandles.camera);
+        stats.recordFrame(inferMs, frame.hands.length);
       }
-      handMesh.update(frame.hands, sceneHandles.camera);
-      stats.recordFrame(inferMs, frame.hands.length);
+      sceneHandles.render();
+      prevTimestamp = now;
+    } catch (err) {
+      // Rate-limit so a recurring exception doesn't flood the log panel.
+      const now = performance.now();
+      if (now - lastErrorAt > 500) {
+        lastErrorAt = now;
+        logger.error(`frame error: ${(err as Error).message}`);
+        console.error(err);
+      }
     }
-    sceneHandles.render();
-    prevTimestamp = now;
     requestAnimationFrame(loop);
   };
   requestAnimationFrame(loop);
