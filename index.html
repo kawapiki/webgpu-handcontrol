@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark" />
+    <title>web-hand · 3D hand-tracked playground</title>
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="scene" aria-label="3D scene"></canvas>
+
+      <div id="camera-stack" aria-label="Camera and landmark overlay">
+        <video id="cam" playsinline muted></video>
+        <canvas id="overlay"></canvas>
+      </div>
+
+      <header id="hud">
+        <span id="mode-badge">mode: <b>pointer</b></span>
+        <span id="fps">— fps</span>
+        <span id="infer">— ms inference</span>
+        <span id="hands">0 hands</span>
+      </header>
+
+      <section id="why-panel" aria-label="Why didn't it fire?">
+        <h3>focus: <span id="why-target">—</span></h3>
+        <ul id="why-list"></ul>
+      </section>
+
+      <section id="log-panel" aria-label="Log console">
+        <div id="log-toolbar">
+          <label><input type="checkbox" data-level="debug" /> debug</label>
+          <label><input type="checkbox" data-level="info" checked /> info</label>
+          <label><input type="checkbox" data-level="warn" checked /> warn</label>
+          <label><input type="checkbox" data-level="error" checked /> error</label>
+          <button id="log-clear">clear</button>
+        </div>
+        <ol id="log-list"></ol>
+      </section>
+
+      <div id="boot" role="status">
+        <p>Click anywhere to grant camera access.</p>
+        <button id="boot-btn">Start</button>
+      </div>
+
+      <div id="calibration" class="hidden" aria-label="Calibration wizard">
+        <div class="cal-card" data-kind="countdown">
+          <div class="cal-title">Calibration</div>
+          <div class="cal-prompt">—</div>
+          <div class="cal-hint">—</div>
+          <div class="cal-progress"><span></span></div>
+          <pre class="cal-live">—</pre>
+          <div class="cal-actions"></div>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
