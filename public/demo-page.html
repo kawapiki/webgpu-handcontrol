@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hand-controlled demo page</title>
+    <style>
+      :root { color-scheme: light; }
+      * { box-sizing: border-box; }
+      html, body {
+        margin: 0; padding: 0;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: #fff; color: #1c1f24;
+      }
+      header {
+        position: sticky; top: 0; z-index: 5;
+        background: #1c1f24; color: #fff; padding: 14px 24px;
+        display: flex; gap: 14px; align-items: center;
+      }
+      header h1 { margin: 0; font-size: 16px; font-weight: 600; }
+      header nav { display: flex; gap: 12px; margin-left: auto; }
+      header nav a { color: #8be8c0; text-decoration: none; font-size: 14px; }
+      header nav a:hover, header nav a:focus { text-decoration: underline; }
+      main { max-width: 720px; margin: 0 auto; padding: 24px; }
+      h2 { margin-top: 32px; }
+      p { line-height: 1.6; color: #2f3540; }
+      ul.cards { list-style: none; padding: 0; margin: 16px 0; display: grid; gap: 12px; }
+      ul.cards li {
+        border: 1px solid #d4d8df; border-radius: 8px; padding: 14px 18px; cursor: pointer;
+        transition: background 80ms ease, transform 80ms ease;
+      }
+      ul.cards li:hover, ul.cards li:focus-within { background: #f3f6fa; }
+      ul.cards li.clicked { background: #e6f5ee; transform: scale(0.99); }
+      .button-row { display: flex; gap: 8px; margin: 16px 0; flex-wrap: wrap; }
+      button {
+        font: inherit; border: 1px solid #1c1f24; background: #fff; color: #1c1f24;
+        padding: 8px 14px; border-radius: 6px; cursor: pointer;
+      }
+      button:hover { background: #1c1f24; color: #fff; }
+      button.primary { background: #1c1f24; color: #fff; }
+      .counter {
+        display: inline-block; padding: 4px 10px; border-radius: 999px;
+        background: #e6f5ee; color: #16704a; font-variant-numeric: tabular-nums;
+      }
+      footer { margin: 64px auto 96px; max-width: 720px; padding: 0 24px; color: #6c7384; font-size: 13px; }
+      .lorem { color: #4a5260; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Hand-control sandbox</h1>
+      <nav>
+        <a href="#section-articles">Articles</a>
+        <a href="#section-buttons">Buttons</a>
+        <a href="#section-list">List</a>
+      </nav>
+    </header>
+
+    <main>
+      <p>This page is here to be controlled with your hand. Move the cursor with
+      your index finger; pinch (thumb-to-index) to click; pinch and drag
+      vertically to scroll.</p>
+
+      <h2 id="section-buttons">Buttons</h2>
+      <p>Pinch any of these to fire a click. The counter on the right tracks
+      how many times you've clicked it.</p>
+      <div class="button-row">
+        <button data-counter="0" class="primary">Primary action</button>
+        <button data-counter="0">Secondary</button>
+        <button data-counter="0">Tertiary</button>
+        <span class="counter" id="click-counter">0 total clicks</span>
+      </div>
+
+      <h2 id="section-articles">Articles</h2>
+      <ul class="cards">
+        <li tabindex="0"><strong>Why pinch beats grab</strong><br />
+          A clenched fist tires fast and gives one bit of information; pinch
+          measures a continuous distance between the two most stable
+          landmarks on a hand. That's why every modern mid-air UI uses it.</li>
+        <li tabindex="0"><strong>The One Euro filter, briefly</strong><br />
+          A simple low-pass filter whose cutoff frequency increases with
+          measured speed. Cuts jitter on slow movements without adding lag
+          to fast ones.</li>
+        <li tabindex="0"><strong>Topology constraints</strong><br />
+          Per-axis smoothing breaks the kinematic chain when one fingertip
+          glitches. A bone-length EMA puts joints back where their parents
+          and segment lengths say they should be.</li>
+      </ul>
+
+      <h2 id="section-list">A long list to scroll</h2>
+      <p>Pinch and drag downward to scroll the document down. The page is
+      intentionally tall so you can practise long-distance scrolling.</p>
+      <ul class="cards" id="scroll-list"></ul>
+    </main>
+
+    <footer>End of demo page. Pinch in empty space to do nothing.</footer>
+
+    <script>
+      // Wire up button counters.
+      const counterEl = document.getElementById('click-counter');
+      let totalClicks = 0;
+      for (const btn of document.querySelectorAll('button[data-counter]')) {
+        btn.addEventListener('click', () => {
+          const next = (Number(btn.dataset.counter) || 0) + 1;
+          btn.dataset.counter = String(next);
+          btn.textContent = btn.textContent.replace(/ \(\d+\)$/, '') + ` (${next})`;
+          totalClicks += 1;
+          counterEl.textContent = `${totalClicks} total clicks`;
+        });
+      }
+
+      // Article cards: visual feedback on click.
+      for (const li of document.querySelectorAll('ul.cards li')) {
+        li.addEventListener('click', () => {
+          li.classList.add('clicked');
+          setTimeout(() => li.classList.remove('clicked'), 200);
+        });
+      }
+
+      // Generate a long scrollable list.
+      const list = document.getElementById('scroll-list');
+      for (let i = 1; i <= 40; i++) {
+        const li = document.createElement('li');
+        li.tabIndex = 0;
+        li.innerHTML = `<strong>Item #${i}</strong><br /><span class="lorem">
+          Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pinch this
+          card to "open" it (highlights briefly).
+        </span>`;
+        li.addEventListener('click', () => {
+          li.classList.add('clicked');
+          setTimeout(() => li.classList.remove('clicked'), 200);
+        });
+        list.appendChild(li);
+      }
+    </script>
+  </body>
+</html>

@@ -2,9 +2,9 @@
  * "Cloth Box" demo: a box hidden under a draped cloth. Pinch the cloth
  * with thumb-and-index, drag to pull it off, release to drop it.
  *
- * Only runs in `draw` mode (the pinch-based mode) — outside it the
- * scene simulates physics but never grabs, so accidental hand poses
- * can't pull the cloth.
+ * The grab is only attempted when the pinch *midpoint* is close to a
+ * cloth vertex — pinches in empty space are ignored, so the gesture
+ * is naturally context-sensitive without needing a global mode.
  *
  * Pinch logic uses the existing `pinch` gesture detector (per-hand) so
  * all the noise-prevention layers (hysteresis, hold-time, etc.) apply
@@ -133,13 +133,14 @@ export class ClothBoxScene implements DemoScene {
     this.releaseGrab();
   }
 
-  step({ hands, states, camera, raycaster, dtMs, mode }: SceneStepInput): void {
+  step({ hands, states, camera, raycaster, dtMs }: SceneStepInput): void {
     const pinch = states['pinch'] as GestureState<PinchData> | undefined;
 
-    // Decide who's pinching. Outside `draw` mode, force release so a
-    // stray pinch from another mode (or a noisy frame) can't grab.
+    // Decide who's pinching. The grab is gated by proximity to a cloth
+    // vertex (see `findNearestVertex`), so a stray pinch in empty space
+    // simply does nothing.
     let pinchedHandId: number | null = null;
-    if (mode === 'draw' && pinch?.active) {
+    if (pinch?.active) {
       // Prefer the hand we already grabbed with, if it's still pinching.
       if (this.grabbedHandId !== null && pinch.data.perHand[this.grabbedHandId]?.pinched) {
         pinchedHandId = this.grabbedHandId;

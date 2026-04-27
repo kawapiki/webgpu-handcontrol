@@ -115,3 +115,41 @@ html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg);
 #calibration .cal-actions button:hover { background: rgba(74, 210, 149, 0.1); }
 #calibration .cal-card[data-kind="review"] .cal-prompt,
 #calibration .cal-card[data-kind="done"] .cal-prompt { font-size: 18px; }
+
+/* Webpage demo scene — full-screen iframe overlay + hand cursor disc. */
+#webpage-overlay {
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  z-index: 5;
+}
+#webpage-overlay.hidden { display: none; }
+#webpage-overlay iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #fff;
+}
+#webpage-cursor {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(74, 210, 149, 0.35);
+  border: 2px solid var(--accent);
+  box-shadow: 0 0 12px rgba(74, 210, 149, 0.6);
+  pointer-events: none;
+  z-index: 6;
+  transform: translate3d(0, 0, 0);
+  transition: width 80ms ease, height 80ms ease, background 80ms ease;
+}
+#webpage-cursor.hidden { display: none; }
+#webpage-cursor.pinching {
+  width: 32px;
+  height: 32px;
+  background: rgba(74, 210, 149, 0.55);
+}

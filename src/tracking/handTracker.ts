@@ -10,9 +10,8 @@
 
 import { FilesetResolver, HandLandmarker, type HandLandmarkerResult } from '@mediapipe/tasks-vision';
 
-import { params } from '../config/parameters.js';
+import type { GestureConfig } from '../config/gestureConfig.js';
 import type { FrameInput, HandFrame, Handedness, Landmark, Landmarks } from '../config/types.js';
-import { logger } from '../debug/logger.js';
 import { LandmarkSmoother } from '../filters/landmarkSmoother.js';
 import { computeHandMetrics, dist } from '../util/geometry.js';
 
@@ -33,21 +32,22 @@ export class HandTracker {
   private nextId = 1;
   private tracked = new Map<number, TrackedHand>();
 
+  constructor(private readonly getConfig: () => GestureConfig) {}
+
   async init(): Promise<void> {
-    logger.info('loading hand landmarker model…');
+    const cfg = this.getConfig();
     const fileset = await FilesetResolver.forVisionTasks(WASM_BASE);
     this.landmarker = await HandLandmarker.createFromOptions(fileset, {
       baseOptions: {
         modelAssetPath: MODEL_URL,
         delegate: 'GPU',
       },
-      numHands: params.detection.maxHands,
+      numHands: cfg.detection.maxHands,
       runningMode: 'VIDEO',
-      minHandDetectionConfidence: params.detection.minHandScore,
-      minHandPresenceConfidence: params.detection.minHandScore,
-      minTrackingConfidence: params.detection.minHandScore,
+      minHandDetectionConfidence: cfg.detection.minHandScore,
+      minHandPresenceConfidence: cfg.detection.minHandScore,
+      minTrackingConfidence: cfg.detection.minHandScore,
     });
-    logger.info('hand landmarker ready (GPU delegate).');
   }
 
   detect(videoEl: HTMLVideoElement, timestampMs: number): FrameInput {
@@ -59,7 +59,7 @@ export class HandTracker {
     try {
       result = this.landmarker.detectForVideo(videoEl, timestampMs);
     } catch (err) {
-      logger.error(`detectForVideo failed: ${(err as Error).message}`);
+      console.error('handTracker: detectForVideo failed', err);
       return { hands: [], timestampMs };
     }
 
@@ -136,7 +136,7 @@ export class HandTracker {
         bestId = this.nextId++;
         this.tracked.set(bestId, {
           id: bestId,
-          smoother: new LandmarkSmoother(),
+          smoother: new LandmarkSmoother(this.getConfig),
           lastPalm: palm,
           lastSeenAt: 0,
         });

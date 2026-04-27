@@ -1,9 +1,12 @@
 /**
- * Core shared types. Keep this file dependency-free.
+ * Core shared types. Keep this file dependency-free except for sibling
+ * config-shape types (also dependency-free).
  *
  * Convention: every gesture is a pure function operating on a HandFrame snapshot
  * plus its previous state. This keeps gestures testable in isolation.
  */
+
+import type { GestureConfig } from './gestureConfig.js';
 
 export type Vec2 = { x: number; y: number };
 export type Vec3 = { x: number; y: number; z: number };
@@ -78,6 +81,8 @@ export interface GestureContext {
   prevMs: number;
   /** Read-only view of all gesture states this frame, keyed by name. */
   states: Readonly<Record<string, GestureState>>;
+  /** Live tuning bag — one snapshot per frame. Detectors read thresholds from here. */
+  config: GestureConfig;
 }
 
 /** A gesture detector — one per file under src/gestures. */

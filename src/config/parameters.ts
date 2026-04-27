@@ -53,15 +53,6 @@ export interface Parameters {
     holdMs: number;
   };
 
-  grab: {
-    /** Mean curl across all four non-thumb fingers above which we consider the hand "fisted". */
-    enter: number;
-    /** Below this the grab releases. */
-    exit: number;
-    /** ms the fist must hold before a grab is committed. */
-    holdMs: number;
-  };
-
   openPalm: {
     /** Mean curl below this means open. */
     maxCurl: number;
@@ -76,13 +67,23 @@ export interface Parameters {
     zoomDeadzone: number;
     /** Minimum frame-to-frame change in inter-hand twist angle (rad) to update rotation. */
     rotateDeadzone: number;
+    /** Both hands must remain pinched this many ms before rotation engages (debounce). */
+    rotateHoldMs: number;
+    /** EMA smoothing factor for the inter-palm angle (0 = no smoothing, 1 = freeze). */
+    rotateSmoothing: number;
+    /** Any frame-to-frame |Δangle| above this (rad) is treated as a glitch and zeroed. */
+    rotateMaxStep: number;
   };
 
-  modeSwitch: {
-    /** ms a finger-count pose must hold before switching modes. */
-    holdMs: number;
-    /** ms cooldown between mode changes. */
-    cooldownMs: number;
+  objectRotate: {
+    /** Multiplier from wrist-roll Δ (rad) to grabbed-object yaw Δ. */
+    rollGain: number;
+    /** Multiplier from wrist-pitch Δ (normalized z) to grabbed-object pitch Δ (rad). */
+    pitchGain: number;
+    /** Below this absolute Δroll the object is left alone (cuts jitter). */
+    rollDeadzone: number;
+    /** Below this absolute Δpitch the object is left alone. */
+    pitchDeadzone: number;
   };
 
   scene: {
@@ -90,17 +91,37 @@ export interface Parameters {
     fov: number;
     /** World-units multiplier when mapping pinch-zoom to camera distance. */
     zoomGain: number;
-    /** World-units multiplier when mapping hand translation to grabbed object motion. */
-    grabGain: number;
+    /** World-units multiplier when mapping hand translation to dragged object motion. */
+    dragGain: number;
+  };
+
+  depth: {
+    /** Image-plane hand size (wrist→middle-MCP, normalized) at which `baseDepth` is used. */
+    referenceScale: number;
+    /** Depth (world units) when the hand is at reference size. */
+    baseDepth: number;
+    /** World units gained per unit of (handSize / referenceScale − 1). Positive = bigger hand pushes deeper. */
+    gain: number;
+    /** Lower clamp on estimated depth. */
+    min: number;
+    /** Upper clamp on estimated depth. */
+    max: number;
   };
 
   handMesh: {
     /** Whether to render the 3D hand skeleton in-scene. */
     show: boolean;
-    /** Distance from camera, in world units, at which the hand plane sits. */
-    depth: number;
-    /** Multiplier converting MediaPipe relative-z to depth offsets. */
+    /** Multiplier converting MediaPipe relative-z to per-finger depth offsets. */
     zScale: number;
+    /**
+     * Inverse-size gain. The hand mesh is scaled around its palm center by
+     * `ratio^(-sizeInvertGain)`. Effect on apparent size on screen:
+     *   0 = natural (close hand → big)
+     *   1 = constant apparent size regardless of physical distance
+     *   2 = inverted (close hand → small in scene; deep hand → big)
+     * Tunable in Tweakpane; values above 2 give an exaggerated telescope feel.
+     */
+    sizeInvertGain: number;
   };
 
   debug: {
@@ -137,11 +158,6 @@ export const defaultParameters: Parameters = {
     othersCurledMin: 0.55,
     holdMs: 80,
   },
-  grab: {
-    enter: 0.7,
-    exit: 0.5,
-    holdMs: 100,
-  },
   openPalm: {
     maxCurl: 0.2,
     holdMs: 150,
@@ -149,21 +165,33 @@ export const defaultParameters: Parameters = {
   twoHand: {
     minBothScore: 0.6,
     zoomDeadzone: 0.005,
-    rotateDeadzone: 0.02,
+    rotateDeadzone: 0.005,
+    rotateHoldMs: 80,
+    rotateSmoothing: 0.35,
+    rotateMaxStep: 0.5,
   },
-  modeSwitch: {
-    holdMs: 400,
-    cooldownMs: 600,
+  objectRotate: {
+    rollGain: 1.0,
+    pitchGain: 4.0,
+    rollDeadzone: 0.005,
+    pitchDeadzone: 0.003,
   },
   scene: {
     fov: 55,
     zoomGain: 6.0,
-    grabGain: 4.0,
+    dragGain: 4.0,
+  },
+  depth: {
+    referenceScale: 0.16,
+    baseDepth: 3.5,
+    gain: 2.5,
+    min: 1.5,
+    max: 7.0,
   },
   handMesh: {
     show: true,
-    depth: 3.5,
     zScale: 4.0,
+    sizeInvertGain: 2.0,
   },
   debug: {
     showLandmarks: true,

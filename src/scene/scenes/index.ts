@@ -8,9 +8,11 @@
 
 import type * as THREE from 'three';
 
+import type { HandControl } from '../../control/handControl.js';
 import { logger } from '../../debug/logger.js';
 import { ClothBoxScene } from './clothBoxScene.js';
 import { ShapesScene } from './shapesScene.js';
+import { WebpageScene } from './webpageScene.js';
 import type { DemoScene, SceneStepInput } from './types.js';
 
 export class SceneManager {
@@ -52,8 +54,12 @@ export class SceneManager {
   }
 }
 
-export function createSceneManager(parent: THREE.Group): SceneManager {
-  return new SceneManager(parent, [new ShapesScene(), new ClothBoxScene()]);
+export function createSceneManager(parent: THREE.Group, handControl: HandControl): SceneManager {
+  return new SceneManager(parent, [
+    new ShapesScene(),
+    new ClothBoxScene(),
+    new WebpageScene(handControl),
+  ]);
 }
 
-export type { DemoScene, SceneStepInput, Mode } from './types.js';
+export type { DemoScene, SceneStepInput } from './types.js';

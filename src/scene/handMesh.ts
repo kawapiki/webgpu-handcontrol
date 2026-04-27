@@ -19,6 +19,8 @@ import * as THREE from 'three/webgpu';
 
 import { params } from '../config/parameters.js';
 import type { HandFrame, Handedness } from '../config/types.js';
+import { clamp } from '../util/geometry.js';
+import { estimateDepth, handSizeRatio } from './depth.js';
 
 const BONES: ReadonlyArray<readonly [number, number]> = [
   [0, 1], [1, 2], [2, 3], [3, 4],          // thumb
@@ -83,6 +85,7 @@ class RenderedHand {
     raycaster: THREE.Raycaster,
     depth: number,
     zScale: number,
+    sizeFactor: number,
   ): void {
     const ndc = new THREE.Vector2();
     const tmp = new THREE.Vector3();
@@ -99,8 +102,27 @@ class RenderedHand {
       raycaster.setFromCamera(ndc, camera);
       const t = depth + lm.z * zScale;
       raycaster.ray.at(t, tmp);
-      this.joints[i]!.position.copy(tmp);
       this.worldPositions[i]!.copy(tmp);
+    }
+
+    // Inverse-scale the entire hand around its palm center. The "raw"
+    // joint positions above already produce on-screen size proportional
+    // to physical hand size (NDC range × focal length, depth-invariant).
+    // Multiplying by sizeFactor ∝ ratio^(-sizeInvertGain) reverses that:
+    // a bigger physical hand contracts the joints toward the palm, so
+    // the *virtual* hand appears smaller.
+    if (sizeFactor !== 1) {
+      const palm = tmp.copy(this.worldPositions[0]!).add(this.worldPositions[9]!).multiplyScalar(0.5);
+      const offset = new THREE.Vector3();
+      for (let i = 0; i < LANDMARK_COUNT; i++) {
+        const wp = this.worldPositions[i]!;
+        offset.subVectors(wp, palm).multiplyScalar(sizeFactor);
+        wp.copy(palm).add(offset);
+      }
+    }
+
+    for (let i = 0; i < LANDMARK_COUNT; i++) {
+      this.joints[i]!.position.copy(this.worldPositions[i]!);
     }
 
     for (let bi = 0; bi < BONES.length; bi++) {
@@ -155,7 +177,16 @@ export class HandMesh {
         this.root.add(r.group);
       }
       r.group.visible = true;
-      r.update(hand, camera, this.raycaster, params.handMesh.depth, params.handMesh.zScale);
+      // Depth: small hand (arm extended) reaches deeper into the scene.
+      const depth = estimateDepth(hand.landmarks);
+      // Inverse visual scale: the rendered hand's apparent size moves
+      // OPPOSITE to physical hand size. Mathematically, on-screen size
+      // ∝ ratio × sizeFactor, so sizeFactor = ratio^(-sizeInvertGain).
+      // gain=2 → on-screen size ∝ 1/ratio → close hand looks SMALL.
+      const ratio = Math.max(0.1, handSizeRatio(hand.landmarks));
+      const rawSizeFactor = Math.pow(ratio, -params.handMesh.sizeInvertGain);
+      const sizeFactor = clamp(rawSizeFactor, 0.2, 4);
+      r.update(hand, camera, this.raycaster, depth, params.handMesh.zScale, sizeFactor);
     }
     for (const [id, r] of this.rendered) {
       if (!seen.has(id)) {

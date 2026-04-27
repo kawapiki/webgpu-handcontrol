@@ -1,52 +1,32 @@
 /**
- * Maps gesture state to scene actions. Handles three things:
+ * Maps gesture state to scene actions. Two responsibilities:
  *
- *   1. Global mode switching (pointer / move / draw) via finger count.
- *   2. Two-handed gestures that act on the world pivot (zoom, rotate).
- *   3. Delegating per-frame work to the currently-active demo scene.
+ *   1. Two-handed gestures that act on the world pivot (zoom, rotate).
+ *   2. Delegating per-frame work to the currently-active demo scene.
  *
- * The mode/global handlers are tiny, so this file is mostly glue. Per-
- * scene logic lives in `src/scene/scenes/<scene>.ts`.
+ * No more global "modes" — scenes are mode-free and decide what to do
+ * based on what's under the cursor / pinch midpoint.
  */
 
 import * as THREE from 'three/webgpu';
 
 import { params } from '../config/parameters.js';
 import type { GestureState, HandFrame } from '../config/types.js';
-import { logger } from '../debug/logger.js';
 import type { TwoHandRotateData } from '../gestures/twoHandRotate.js';
 import type { TwoHandZoomData } from '../gestures/twoHandZoom.js';
 import type { SceneManager } from '../scene/scenes/index.js';
-import type { Mode } from '../scene/scenes/types.js';
 import { clamp } from '../util/geometry.js';
 
 export class InteractionController {
-  private mode: Mode = 'pointer';
-  private modeChangedAt = 0;
   private raycaster = new THREE.Raycaster();
   private prevTimeMs = performance.now();
 
   constructor(
     private scene: { camera: THREE.PerspectiveCamera; worldPivot: THREE.Group },
     private sceneManager: SceneManager,
-    private modeBadge: HTMLElement,
-  ) {
-    this.updateBadge();
-  }
-
-  getMode(): Mode { return this.mode; }
-
-  setMode(next: Mode, nowMs: number): void {
-    if (next === this.mode) return;
-    if (nowMs - this.modeChangedAt < params.modeSwitch.cooldownMs) return;
-    this.mode = next;
-    this.modeChangedAt = nowMs;
-    this.updateBadge();
-    logger.info(`mode → ${next}`);
-  }
+  ) {}
 
   step(hands: HandFrame[], states: Readonly<Record<string, GestureState>>, nowMs: number): void {
-    this.handleModeSwitch(hands, nowMs);
     this.handleTwoHand(states);
 
     const dtMs = nowMs - this.prevTimeMs;
@@ -57,22 +37,7 @@ export class InteractionController {
       camera: this.scene.camera,
       raycaster: this.raycaster,
       dtMs,
-      mode: this.mode,
     });
-  }
-
-  private updateBadge(): void {
-    const b = this.modeBadge.querySelector('b');
-    if (b) b.textContent = this.mode;
-  }
-
-  private handleModeSwitch(hands: HandFrame[], nowMs: number): void {
-    if (hands.length !== 1) return;
-    const h = hands[0]!;
-    const extended = h.metrics.curl.slice(1).filter((c) => c !== undefined && c < params.point.indexExtendedMax).length;
-    if (extended === 1) this.setMode('pointer', nowMs);
-    else if (extended === 2) this.setMode('move', nowMs);
-    else if (extended === 3) this.setMode('draw', nowMs);
   }
 
   private handleTwoHand(states: Readonly<Record<string, GestureState>>): void {

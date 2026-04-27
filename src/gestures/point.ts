@@ -3,7 +3,6 @@
  * source for the 3D raycast cursor in the scene.
  */
 
-import { params } from '../config/parameters.js';
 import type { FrameInput, GestureContext, GestureDetector, GestureState, Vec3 } from '../config/types.js';
 import { condition, emptyState, holdGate } from './utils.js';
 
@@ -32,11 +31,11 @@ export const pointDetector: GestureDetector<PointData> = {
       const ringCurl = hand.metrics.curl[3] ?? 0;
       const pinkyCurl = hand.metrics.curl[4] ?? 0;
 
-      const indexExtended = indexCurl < params.point.indexExtendedMax;
+      const indexExtended = indexCurl < ctx.config.point.indexExtendedMax;
       const othersCurled =
-        middleCurl > params.point.othersCurledMin &&
-        ringCurl > params.point.othersCurledMin &&
-        pinkyCurl > params.point.othersCurledMin;
+        middleCurl > ctx.config.point.othersCurledMin &&
+        ringCurl > ctx.config.point.othersCurledMin &&
+        pinkyCurl > ctx.config.point.othersCurledMin;
 
       const raw = indexExtended && othersCurled;
       // Confidence = how clearly the conditions are met.
@@ -44,9 +43,9 @@ export const pointDetector: GestureDetector<PointData> = {
         0,
         Math.min(
           1,
-          (params.point.indexExtendedMax - indexCurl) / params.point.indexExtendedMax * 0.5 +
-            (Math.min(middleCurl, ringCurl, pinkyCurl) - params.point.othersCurledMin) /
-              (1 - params.point.othersCurledMin) * 0.5,
+          (ctx.config.point.indexExtendedMax - indexCurl) / ctx.config.point.indexExtendedMax * 0.5 +
+            (Math.min(middleCurl, ringCurl, pinkyCurl) - ctx.config.point.othersCurledMin) /
+              (1 - ctx.config.point.othersCurledMin) * 0.5,
         ),
       );
 
@@ -66,7 +65,7 @@ export const pointDetector: GestureDetector<PointData> = {
       }
     }
 
-    const gated = holdGate(bestRaw, { active: prev.active, enteredAt: prev.enteredAt }, ctx.nowMs, params.point.holdMs);
+    const gated = holdGate(bestRaw, { active: prev.active, enteredAt: prev.enteredAt }, ctx.nowMs, ctx.config.point.holdMs);
     next.active = gated.active;
     next.enteredAt = gated.enteredAt;
     next.confidence = bestRaw ? bestConfidence : 0;

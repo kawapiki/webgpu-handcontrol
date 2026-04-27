@@ -1,0 +1,51 @@
+{
+  "name": "@kawapiki/handcontrol",
+  "version": "0.1.0",
+  "description": "Hand-tracked input for any website. Cursor, click, scroll, zoom, rotate, and per-hand pose events from a webcam, powered by MediaPipe + WebGPU.",
+  "type": "module",
+  "main": "./handcontrol.js",
+  "module": "./handcontrol.js",
+  "types": "./control/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./control/index.d.ts",
+      "import": "./handcontrol.js",
+      "default": "./handcontrol.js"
+    }
+  },
+  "files": [
+    "handcontrol.js",
+    "handcontrol.js.map",
+    "**/*.d.ts",
+    "**/*.d.ts.map",
+    "README.md",
+    "LICENSE"
+  ],
+  "sideEffects": false,
+  "peerDependencies": {
+    "@mediapipe/tasks-vision": "^0.10.18"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "hand-tracking",
+    "gesture",
+    "mediapipe",
+    "webgpu",
+    "computer-vision",
+    "hci",
+    "input",
+    "accessibility"
+  ],
+  "author": "kawapiki",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kawapiki/webgpu-handcontrol.git"
+  },
+  "homepage": "https://github.com/kawapiki/webgpu-handcontrol#readme",
+  "bugs": {
+    "url": "https://github.com/kawapiki/webgpu-handcontrol/issues"
+  }
+}

@@ -6,7 +6,6 @@
  * The interaction controller decides what to apply it to (camera, object…).
  */
 
-import { params } from '../config/parameters.js';
 import type { FrameInput, GestureContext, GestureDetector, GestureState } from '../config/types.js';
 import { dist } from '../util/geometry.js';
 import { condition, emptyState, hysteresis } from './utils.js';
@@ -45,16 +44,16 @@ export const twoHandZoomDetector: GestureDetector<TwoHandZoomData> = {
       return next;
     }
 
-    const bothScored = a.score >= params.twoHand.minBothScore && b.score >= params.twoHand.minBothScore;
+    const bothScored = a.score >= ctx.config.twoHand.minBothScore && b.score >= ctx.config.twoHand.minBothScore;
     const bothPinched =
-      a.metrics.pinch < params.pinch.enter && b.metrics.pinch < params.pinch.enter;
+      a.metrics.pinch < ctx.config.pinch.enter && b.metrics.pinch < ctx.config.pinch.enter;
 
     // Use hysteresis on the geometric mean of the two pinch values.
     const meanPinch = Math.sqrt(Math.max(0, a.metrics.pinch * b.metrics.pinch));
     const wasOn = prev.active;
     const on =
       bothScored &&
-      hysteresis(wasOn, meanPinch, params.pinch.enter, params.pinch.exit, 'lt') &&
+      hysteresis(wasOn, meanPinch, ctx.config.pinch.enter, ctx.config.pinch.exit, 'lt') &&
       bothPinched;
 
     next.conditions.push(
@@ -86,7 +85,7 @@ export const twoHandZoomDetector: GestureDetector<TwoHandZoomData> = {
     }
 
     const delta = d - (prev.data.prevDist ?? d);
-    if (Math.abs(delta) < params.twoHand.zoomDeadzone) {
+    if (Math.abs(delta) < ctx.config.twoHand.zoomDeadzone) {
       next.active = true;
       next.data = { prevDist: d, refDist: prev.data.refDist ?? d, scale: prev.data.scale, delta: 0 };
       return next;
